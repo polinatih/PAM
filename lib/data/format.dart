@@ -1,22 +1,26 @@
-// Простое форматирование без пакета intl.
+// Форматирование дат и длительности без пакета intl.
 
 const _months = [
-  'янв.', 'февр.', 'мар.', 'апр.', 'мая', 'июня',
-  'июля', 'авг.', 'сент.', 'окт.', 'нояб.', 'дек.',
+  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
 ];
 
 const _weekdays = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
 
-String formatDate(DateTime d) =>
-    '${d.day} ${_months[d.month - 1]} ${d.year}, ${_weekdays[d.weekday - 1]}';
+String weekdayShort(DateTime d) => _weekdays[d.weekday - 1];
 
-String formatDateShort(DateTime d) =>
-    '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}';
+String monthName(DateTime d) => _months[d.month - 1];
+
+String formatDateShort(DateTime d) {
+  final day = d.day.toString().padLeft(2, '0');
+  final month = d.month.toString().padLeft(2, '0');
+  return '$day.$month.${d.year}, ${weekdayShort(d)}';
+}
 
 String formatDuration(int minutes) {
   final h = minutes ~/ 60;
   final m = minutes % 60;
   if (h == 0) return '$m мин';
   if (m == 0) return '$h ч';
-  return '$h ч $m мин';
+  return '$h ч ${m.toString().padLeft(2, '0')} мин';
 }
