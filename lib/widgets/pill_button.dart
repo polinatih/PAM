@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// «Войти», «Сохранить сессию», «Добавить в сессию».
 class PillButton extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -17,35 +18,34 @@ class PillButton extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
-    return Material(
-      color: scheme.inverseSurface,
-      shape: const StadiumBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onPressed,
-        child: SizedBox(
-          height: 60,
-          child: Row(
-            children: [
-              const SizedBox(width: 26),
-              Expanded(
-                child: Text(
-                  label,
-                  style: text.titleLarge?.copyWith(color: scheme.onInverseSurface),
-                ),
+    return SizedBox(
+      height: 60,
+      child: FilledButton(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: scheme.inverseSurface,
+          foregroundColor: scheme.onInverseSurface,
+          shape: const StadiumBorder(),
+          padding: const EdgeInsets.only(left: 26, right: 8),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: text.titleLarge?.copyWith(color: scheme.onInverseSurface),
               ),
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: scheme.primary,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, size: 20, color: scheme.onPrimary),
+            ),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: scheme.primary,
+                shape: BoxShape.circle,
               ),
-              const SizedBox(width: 8),
-            ],
-          ),
+              child: Icon(icon, size: 20, color: scheme.onPrimary),
+            ),
+          ],
         ),
       ),
     );
