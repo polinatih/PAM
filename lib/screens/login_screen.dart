@@ -5,7 +5,7 @@ import '../widgets/glass_background.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/pill_button.dart';
 import '../widgets/section_label.dart';
-import 'exercise_catalog_screen.dart';
+import 'home_shell.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -85,11 +85,11 @@ class LoginScreen extends StatelessWidget {
                             PillButton(
                               label: 'Войти',
                               icon: Icons.arrow_forward_rounded,
-                              // Без проверки полей (L2) — просто открываем каталог
+                              // Без проверки полей (L2) — просто открываем приложение
                               onPressed: () => Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const ExerciseCatalogScreen(),
+                                  builder: (_) => const HomeShell(),
                                 ),
                               ),
                             ),
