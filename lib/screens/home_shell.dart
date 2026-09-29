@@ -4,6 +4,7 @@ import '../widgets/glass_background.dart';
 import '../widgets/glass_nav_bar.dart';
 import '../widgets/section_label.dart';
 import 'exercise_catalog_screen.dart';
+import 'progress_stats_screen.dart';
 import 'workout_diary_screen.dart';
 
 /// Временная навигация L2 (вариант 2 из задания): NavigationBar на 4 пункта.
@@ -22,7 +23,7 @@ class _HomeShellState extends State<HomeShell> {
   static const _screens = <Widget>[
     ExerciseCatalogScreen(),
     WorkoutDiaryScreen(),
-    _ComingSoon(title: 'Статистика'),
+    ProgressStatsScreen(),
     _ComingSoon(title: 'Профиль'),
   ];
 
