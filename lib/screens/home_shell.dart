@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../widgets/glass_background.dart';
 import '../widgets/glass_nav_bar.dart';
-import '../widgets/section_label.dart';
 import 'exercise_catalog_screen.dart';
+import 'profile_screen.dart';
 import 'progress_stats_screen.dart';
 import 'workout_diary_screen.dart';
 
@@ -24,7 +23,7 @@ class _HomeShellState extends State<HomeShell> {
     ExerciseCatalogScreen(),
     WorkoutDiaryScreen(),
     ProgressStatsScreen(),
-    _ComingSoon(title: 'Профиль'),
+    ProfileScreen(),
   ];
 
   @override
@@ -61,22 +60,6 @@ class _HomeShellState extends State<HomeShell> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Временная заглушка для вкладок, которые ещё не свёрстаны.
-class _ComingSoon extends StatelessWidget {
-  final String title;
-
-  const _ComingSoon({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: GlassBackground(
-        child: Center(child: SectionLabel('$title · в работе')),
       ),
     );
   }

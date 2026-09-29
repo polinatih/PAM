@@ -1,30 +1,27 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// Простые проверки mock-данных и форматирования (L2).
+// Виджет-тесты экранов появятся на L6.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fit_track/main.dart';
+import 'package:fit_track/data/format.dart';
+import 'package:fit_track/data/mock_data.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  test('formatDuration переводит минуты в «ч мин»', () {
+    expect(formatDuration(40), '40 мин');
+    expect(formatDuration(120), '2 ч');
+    expect(formatDuration(483), '8 ч 03 мин');
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  test('в каждом списке не меньше 6 элементов (требование L2)', () {
+    expect(mockExercises.length, greaterThanOrEqualTo(6));
+    expect(mockSessions.length, greaterThanOrEqualTo(6));
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  test('сессии ссылаются только на существующие упражнения', () {
+    final ids = mockExercises.map((e) => e.id).toSet();
+    for (final s in mockSessions) {
+      expect(ids.containsAll(s.exerciseIds), isTrue);
+    }
   });
 }
