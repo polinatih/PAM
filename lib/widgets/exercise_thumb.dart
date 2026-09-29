@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
-/// Иконка-заглушка вместо изображения упражнения: иконка по группе мышц.
-/// Используется в ExerciseCard, на экране упражнения и в форме сессии.
-class MuscleAvatar extends StatelessWidget {
+/// Миниатюра упражнения: иконка группы мышц в скруглённом квадрате.
+/// На L2 заменяет фото (imageUrl). Используется в ExerciseCard.
+class ExerciseThumb extends StatelessWidget {
   final String muscleGroup;
   final double size;
 
-  const MuscleAvatar({super.key, required this.muscleGroup, this.size = 44});
+  const ExerciseThumb({super.key, required this.muscleGroup, this.size = 54});
 
+  /// Иконка для каждой группы мышц.
   static IconData iconFor(String group) {
     switch (group) {
       case 'Грудь':
@@ -36,14 +37,13 @@ class MuscleAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(size * 0.3),
+        color: scheme.primary.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(size / 3),
+        border: Border.all(
+          color: scheme.surfaceContainerLowest.withValues(alpha: 0.9),
+        ),
       ),
-      child: Icon(
-        iconFor(muscleGroup),
-        size: size * 0.55,
-        color: scheme.onPrimaryContainer,
-      ),
+      child: Icon(iconFor(muscleGroup), size: size * 0.44, color: scheme.primary),
     );
   }
 }
