@@ -6,6 +6,7 @@ import '../widgets/glass_background.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/section_label.dart';
 import '../widgets/session_card.dart';
+import 'session_form_screen.dart';
 
 /// Дневник тренировок: сессии в хронологическом порядке (новые сверху),
 /// как их отдаёт GET /workout-sessions.
@@ -56,7 +57,12 @@ class WorkoutDiaryScreen extends StatelessWidget {
                         shadowColor: scheme.primary.withValues(alpha: 0.6),
                         child: InkWell(
                           customBorder: const CircleBorder(),
-                          onTap: () {}, // форма сессии — следующий шаг
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SessionFormScreen(),
+                            ),
+                          ),
                           child: SizedBox(
                             width: 52,
                             height: 52,
@@ -186,7 +192,13 @@ class _TimelineItem extends StatelessWidget {
           Expanded(
             child: SessionCard(
               session: session,
-              onTap: () {}, // редактирование сессии — следующий шаг
+              // Нажатие на сессию открывает форму в режиме редактирования
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SessionFormScreen(session: session),
+                ),
+              ),
             ),
           ),
         ],

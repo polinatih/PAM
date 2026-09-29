@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
+
 import '../data/format.dart';
 import '../data/mock_data.dart';
-import '../widgets/exercise_card.dart';
+import '../widgets/filter_pill.dart';
+import '../widgets/glass_background.dart';
+import '../widgets/glass_card.dart';
+import '../widgets/glass_icon_button.dart';
+import '../widgets/pill_button.dart';
+import '../widgets/section_label.dart';
 
 /// Форма новой сессии / редактирования — макет без валидации и сохранения.
-/// Если передан session — поля заполнены его данными (режим редактирования).
+/// Поля = модель WorkoutSession: date, exerciseIds, durationMin, notes.
+/// Если передан [session] — режим редактирования (PUT/DELETE на L5),
+/// иначе — новая сессия (POST /workout-sessions на L5).
 class SessionFormScreen extends StatelessWidget {
   final WorkoutSession? session;
 
@@ -12,112 +20,179 @@ class SessionFormScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
+
     final isEdit = session != null;
-    final selectedIds = session?.exerciseIds ?? const ['e1', 'e7'];
-    final selected = selectedIds.map(exerciseById).toList();
+    final date = session?.date ?? DateTime(2026, 9, 29);
+    final duration = session?.durationMin ?? 60;
+    final selectedIds = session?.exerciseIds ?? const [1, 6];
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isEdit ? 'Редактирование' : 'Новая сессия'),
-        actions: [
-          if (isEdit)
-            IconButton(onPressed: () {}, icon: const Icon(Icons.delete_outline)),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          TextFormField(
-            initialValue: formatDateShort(session?.date ?? DateTime(2026, 9, 23)),
-            readOnly: true,
-            decoration: const InputDecoration(
-              labelText: 'Дата',
-              prefixIcon: Icon(Icons.calendar_today_outlined),
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            initialValue: '${session?.durationMin ?? 60}',
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Длительность',
-              suffixText: 'мин',
-              prefixIcon: Icon(Icons.timer_outlined),
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          DropdownMenu<String>(
-            initialSelection: 'Силовая',
-            label: const Text('Тип тренировки'),
-            leadingIcon: const Icon(Icons.category_outlined),
-            expandedInsets: EdgeInsets.zero,
-            dropdownMenuEntries: const [
-              DropdownMenuEntry(value: 'Силовая', label: 'Силовая'),
-              DropdownMenuEntry(value: 'Кардио', label: 'Кардио'),
-              DropdownMenuEntry(value: 'Смешанная', label: 'Смешанная'),
-              DropdownMenuEntry(value: 'Растяжка', label: 'Растяжка'),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text('Упражнения', style: text.titleMedium),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
+      body: GlassBackground(
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
             children: [
-              for (final e in mockExercises)
-                FilterChip(
-                  label: Text(e.name, overflow: TextOverflow.ellipsis),
-                  selected: selectedIds.contains(e.id),
-                  onSelected: (_) {},
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text('Выбрано: ${selected.length}', style: text.titleSmall),
-          const SizedBox(height: 8),
-          for (final e in selected)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: ExerciseCard(
-                exercise: e,
-                trailing: IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.close),
+              // Верхняя панель: закрыть · режим · удалить
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GlassIconButton(
+                    icon: Icons.close_rounded,
+                    tooltip: 'Закрыть',
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  SectionLabel(isEdit ? 'Редактирование' : 'Новая сессия'),
+                  if (isEdit)
+                    const GlassIconButton(
+                      icon: Icons.delete_outline_rounded,
+                      tooltip: 'Удалить сессию',
+                    )
+                  else
+                    const SizedBox(width: 48),
+                ],
+              ),
+              const SizedBox(height: 22),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  isEdit ? 'Изменить\nтренировку' : 'Запишите\nтренировку',
+                  style: text.headlineMedium,
                 ),
               ),
-            ),
-          const SizedBox(height: 8),
-          TextFormField(
-            initialValue: session?.notes ?? '',
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Заметки',
-              hintText: 'Как прошла тренировка, веса, самочувствие…',
-              alignLabelWithHint: true,
-              border: OutlineInputBorder(),
-            ),
+              const SizedBox(height: 22),
+
+              // Дата
+              GlassCard(
+                radius: 26,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today_outlined,
+                        size: 20, color: scheme.primary),
+                    const SizedBox(width: 14),
+                    const SectionLabel('Дата'),
+                    Expanded(
+                      child: TextFormField(
+                        initialValue: formatDateShort(date),
+                        readOnly: true, // на L3 откроется выбор даты
+                        textAlign: TextAlign.end,
+                        style: text.bodyLarge,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Длительность
+              GlassCard(
+                radius: 30,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SectionLabel('Длительность'),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const GlassIconButton(
+                          icon: Icons.remove_rounded,
+                          tooltip: 'Меньше',
+                        ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text('$duration', style: text.displayLarge),
+                            const SizedBox(width: 8),
+                            Text(
+                              'мин',
+                              style: text.bodyLarge?.copyWith(
+                                  color: scheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                        const GlassIconButton(
+                          icon: Icons.add_rounded,
+                          tooltip: 'Больше',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Упражнения: выбранные — акцентные чипы с галочкой
+              GlassCard(
+                radius: 30,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(child: SectionLabel('Упражнения')),
+                        SectionLabel(
+                          'Выбрано · ${selectedIds.length}',
+                          color: scheme.primary,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final e in mockExercises)
+                          FilterPill(
+                            label: e.name,
+                            selected: selectedIds.contains(e.id),
+                            accent: true,
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Заметки
+              GlassCard(
+                radius: 30,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SectionLabel('Заметки'),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      initialValue: session?.notes ?? '',
+                      minLines: 3,
+                      maxLines: 5,
+                      style: text.bodyLarge,
+                      decoration: InputDecoration.collapsed(
+                        hintText: 'Веса, подходы, самочувствие…',
+                        hintStyle: text.bodyLarge
+                            ?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              PillButton(
+                label: 'Сохранить сессию',
+                icon: Icons.check_rounded,
+                onPressed: () {}, // сохранение — L4/L5
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Напомнить о следующей тренировке'),
-            value: true,
-            onChanged: (_) {},
-          ),
-          const SizedBox(height: 8),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(52),
-            ),
-            onPressed: () {},
-            icon: const Icon(Icons.save_outlined),
-            label: const Text('Сохранить'),
-          ),
-        ],
+        ),
       ),
     );
   }

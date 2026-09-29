@@ -8,6 +8,7 @@ import '../widgets/glass_card.dart';
 import '../widgets/glass_icon_button.dart';
 import '../widgets/pill_button.dart';
 import '../widgets/section_label.dart';
+import 'session_form_screen.dart';
 
 /// Карточка упражнения: изображение, описание, техника выполнения.
 /// Данные — один объект Exercise (на L5 — GET /exercises/{id}).
@@ -171,7 +172,12 @@ class ExerciseDetailScreen extends StatelessWidget {
               PillButton(
                 label: 'Добавить в сессию',
                 icon: Icons.add_rounded,
-                onPressed: () {}, // форма сессии — следующие шаги
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SessionFormScreen(),
+                  ),
+                ),
               ),
             ],
           ),
