@@ -30,7 +30,7 @@ class ExerciseDetailScreen extends StatelessWidget {
         mirrored: true,
         child: SafeArea(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
             children: [
               // Верхняя панель: назад · номер · редактировать
               Row(
@@ -174,7 +174,8 @@ class ExerciseDetailScreen extends StatelessWidget {
               PillButton(
                 label: 'Добавить в сессию',
                 icon: Icons.add_rounded,
-                onPressed: () => context.push('/diary/new'),
+                // go: переход в другой раздел (вкладка «Дневник»)
+                onPressed: () => context.go('/diary/new'),
               ),
             ],
           ),

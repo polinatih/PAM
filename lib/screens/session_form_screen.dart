@@ -37,7 +37,7 @@ class SessionFormScreen extends StatelessWidget {
       body: GlassBackground(
         child: SafeArea(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
             children: [
               // Верхняя панель: закрыть · режим · удалить
               Row(
