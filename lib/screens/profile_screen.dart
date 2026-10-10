@@ -130,12 +130,11 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // Выход: возвращает на экран входа и очищает историю переходов
+              // Выход — деструктивное действие: сначала диалог подтверждения
               SizedBox(
                 height: 54,
                 child: OutlinedButton.icon(
-                  // go: раздел приложения уходит из стека (диалог — позже)
-                  onPressed: () => context.go('/login'),
+                  onPressed: () => _logout(context),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: scheme.onSurface,
                     shape: const StadiumBorder(),
@@ -152,6 +151,34 @@ class ProfileScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Диалог «Выйти из аккаунта?»: блокирующее решение → AlertDialog с результатом.
+Future<void> _logout(BuildContext context) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (dialogCtx) => AlertDialog(
+      title: const Text('Выйти из аккаунта?'),
+      content: const Text('Чтобы снова открыть дневник, нужно будет войти.'),
+      actions: [
+        TextButton(
+          // dialogCtx: под вложенными навигаторами вкладок
+          // pop по context экрана закрыл бы не диалог
+          onPressed: () => Navigator.pop(dialogCtx, false),
+          child: const Text('Нет'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogCtx, true),
+          child: const Text('Да, выйти'),
+        ),
+      ],
+    ),
+  );
+  // ok == true: закрытый мимо диалог возвращает null.
+  // После await context используем только если он ещё mounted.
+  if (ok == true && context.mounted) {
+    context.go('/login'); // go: раздел с вкладками уходит из стека
   }
 }
 
