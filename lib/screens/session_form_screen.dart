@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../data/format.dart';
 import '../data/mock_data.dart';
@@ -11,18 +12,22 @@ import '../widgets/section_label.dart';
 
 /// Форма новой сессии / редактирования — макет без валидации и сохранения.
 /// Поля = модель WorkoutSession: date, exerciseIds, durationMin, notes.
-/// Если передан [session] — режим редактирования (PUT/DELETE на L5),
-/// иначе — новая сессия (POST /workout-sessions на L5).
+/// Адрес /diary/:id — режим редактирования (PUT/DELETE на L5):
+/// экран получает только id и сам ищет сессию.
+/// Адрес /diary/new — новая сессия (POST /workout-sessions на L5).
 class SessionFormScreen extends StatelessWidget {
-  final WorkoutSession? session;
+  final int? sessionId;
 
-  const SessionFormScreen({super.key, this.session});
+  const SessionFormScreen({super.key, this.sessionId});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
+    final session = sessionId == null
+        ? null
+        : mockSessions.firstWhere((s) => s.id == sessionId);
     final isEdit = session != null;
     final date = session?.date ?? DateTime(2026, 9, 29);
     final duration = session?.durationMin ?? 60;
@@ -41,7 +46,7 @@ class SessionFormScreen extends StatelessWidget {
                   GlassIconButton(
                     icon: Icons.close_rounded,
                     tooltip: 'Закрыть',
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => context.pop(),
                   ),
                   SectionLabel(isEdit ? 'Редактирование' : 'Новая сессия'),
                   if (isEdit)

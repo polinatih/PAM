@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'screens/login_screen.dart';
+import 'router.dart';
 
 void main() => runApp(const MyApp());
 
@@ -15,7 +15,8 @@ class MyApp extends StatelessWidget {
       dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
     );
 
-    return MaterialApp(
+    // MaterialApp.router: навигацию принимает router, параметра home: больше нет
+    return MaterialApp.router(
       title: 'FitTrack',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -23,7 +24,7 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: scheme.surfaceContainer,
         textTheme: _buildTextTheme(scheme),
       ),
-      home: const LoginScreen(),
+      routerConfig: router,
     );
   }
 

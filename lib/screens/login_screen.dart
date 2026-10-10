@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../widgets/arc_ring.dart';
 import '../widgets/glass_background.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/pill_button.dart';
 import '../widgets/section_label.dart';
-import 'home_shell.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -85,13 +85,8 @@ class LoginScreen extends StatelessWidget {
                             PillButton(
                               label: 'Войти',
                               icon: Icons.arrow_forward_rounded,
-                              // Без проверки полей (L2) — просто открываем приложение
-                              onPressed: () => Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const HomeShell(),
-                                ),
-                              ),
+                              // go, а не push: экран входа уходит из стека
+                              onPressed: () => context.go('/exercises'),
                             ),
                             const SizedBox(height: 4),
                             Row(

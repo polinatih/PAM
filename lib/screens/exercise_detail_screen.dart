@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../data/mock_data.dart';
 import '../widgets/arc_ring.dart';
@@ -8,17 +9,18 @@ import '../widgets/glass_card.dart';
 import '../widgets/glass_icon_button.dart';
 import '../widgets/pill_button.dart';
 import '../widgets/section_label.dart';
-import 'session_form_screen.dart';
 
 /// Карточка упражнения: изображение, описание, техника выполнения.
-/// Данные — один объект Exercise (на L5 — GET /exercises/{id}).
+/// Получает из адреса /exercises/:id только id и сам ищет упражнение:
+/// сегодня в mock-данных, на L4 — через Repository, на L5 — GET /exercises/{id}.
 class ExerciseDetailScreen extends StatelessWidget {
-  final Exercise exercise;
+  final int id;
 
-  const ExerciseDetailScreen({super.key, required this.exercise});
+  const ExerciseDetailScreen({super.key, required this.id});
 
   @override
   Widget build(BuildContext context) {
+    final exercise = exerciseById(id);
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final steps = exercise.techniqueSteps;
@@ -37,7 +39,7 @@ class ExerciseDetailScreen extends StatelessWidget {
                   GlassIconButton(
                     icon: Icons.arrow_back_ios_new_rounded,
                     tooltip: 'Назад',
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => context.pop(),
                   ),
                   SectionLabel('Упражнение · №${exercise.id}'),
                   const GlassIconButton(
@@ -172,12 +174,7 @@ class ExerciseDetailScreen extends StatelessWidget {
               PillButton(
                 label: 'Добавить в сессию',
                 icon: Icons.add_rounded,
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const SessionFormScreen(),
-                  ),
-                ),
+                onPressed: () => context.push('/diary/new'),
               ),
             ],
           ),

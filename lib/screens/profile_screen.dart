@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../data/mock_data.dart';
 import '../widgets/arc_ring.dart';
@@ -6,7 +7,6 @@ import '../widgets/glass_background.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/section_label.dart';
 import '../widgets/stat_tile.dart';
-import 'login_screen.dart';
 
 /// Профиль пользователя. Бэкенд (GET /me) знает о пользователе только
 /// id, email и name — поэтому показываем имя, e-mail и счётчики,
@@ -134,11 +134,8 @@ class ProfileScreen extends StatelessWidget {
               SizedBox(
                 height: 54,
                 child: OutlinedButton.icon(
-                  onPressed: () => Navigator.of(context, rootNavigator: true)
-                      .pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    (route) => false,
-                  ),
+                  // go: раздел приложения уходит из стека (диалог — позже)
+                  onPressed: () => context.go('/login'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: scheme.onSurface,
                     shape: const StadiumBorder(),

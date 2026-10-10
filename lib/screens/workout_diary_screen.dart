@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../data/format.dart';
 import '../data/mock_data.dart';
@@ -6,7 +7,6 @@ import '../widgets/glass_background.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/section_label.dart';
 import '../widgets/session_card.dart';
-import 'session_form_screen.dart';
 
 /// Дневник тренировок: сессии в хронологическом порядке (новые сверху),
 /// как их отдаёт GET /workout-sessions.
@@ -57,12 +57,7 @@ class WorkoutDiaryScreen extends StatelessWidget {
                         shadowColor: scheme.primary.withValues(alpha: 0.6),
                         child: InkWell(
                           customBorder: const CircleBorder(),
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const SessionFormScreen(),
-                            ),
-                          ),
+                          onTap: () => context.push('/diary/new'),
                           child: SizedBox(
                             width: 52,
                             height: 52,
@@ -193,12 +188,7 @@ class _TimelineItem extends StatelessWidget {
             child: SessionCard(
               session: session,
               // Нажатие на сессию открывает форму в режиме редактирования
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => SessionFormScreen(session: session),
-                ),
-              ),
+              onTap: () => context.push('/diary/${session.id}'),
             ),
           ),
         ],
