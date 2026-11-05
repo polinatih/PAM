@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../data/mock_data.dart';
+import '../models/user_model.dart';
 import '../widgets/arc_ring.dart';
 import '../widgets/glass_background.dart';
 import '../widgets/glass_card.dart';
@@ -19,8 +21,13 @@ class ProfileScreen extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
+    // watch в build: профиль показывает пользователя и следит за ним
+    final user = context.watch<UserModel>().user;
+    final name = user?.name ?? 'Гость';
+    final email = user?.email ?? '';
+
     // Инициалы для аватара: «Ана Русу» → «АР»
-    final initials = mockUser.name
+    final initials = name
         .split(' ')
         .where((part) => part.isNotEmpty)
         .map((part) => part[0])
@@ -63,13 +70,13 @@ class ProfileScreen extends StatelessWidget {
 
               // Имя и e-mail — ровно поля из GET /me
               Text(
-                mockUser.name,
+                name,
                 textAlign: TextAlign.center,
                 style: text.headlineMedium,
               ),
               const SizedBox(height: 6),
               Text(
-                mockUser.email,
+                email,
                 textAlign: TextAlign.center,
                 style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
               ),
@@ -178,6 +185,7 @@ Future<void> _logout(BuildContext context) async {
   // ok == true: закрытый мимо диалог возвращает null.
   // После await context используем только если он ещё mounted.
   if (ok == true && context.mounted) {
+    context.read<UserModel>().signOut(); // read: это действие, а не показ
     context.go('/login'); // go: раздел с вкладками уходит из стека
   }
 }

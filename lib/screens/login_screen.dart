@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import '../data/user.dart';
+import '../models/user_model.dart';
 
 import '../widgets/arc_ring.dart';
 import '../widgets/glass_background.dart';
@@ -53,6 +57,14 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     }
+    // Разделяемое состояние: запоминаем, кто вошёл (read — это действие).
+    // На L4 вход локальный; имя при обычном входе — часть e-mail до @.
+    final email = _emailCtrl.text.trim();
+    context.read<UserModel>().signIn(User(
+          id: 0, // настоящий id даст сервер на L5
+          email: email,
+          name: _isRegister ? _nameCtrl.text.trim() : email.split('@').first,
+        ));
     // go, НЕ push: экран входа уходит из стека,
     // и кнопка «назад» не вернёт вошедшего пользователя на логин
     context.go('/exercises');

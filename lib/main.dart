@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
+import 'models/user_model.dart';
 import 'router.dart';
 
-void main() => runApp(const MyApp());
+/// Модель монтируется НАД router-ом — её видят все экраны.
+/// create — фабрика: Provider создаёт модель лениво и сам вызывает dispose.
+void main() => runApp(
+      ChangeNotifierProvider(
+        create: (_) => UserModel(),
+        child: const MyApp(),
+      ),
+    );
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

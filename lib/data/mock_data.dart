@@ -1,90 +1,12 @@
+// Seed-данные (L2). С L4 их единственный клиент — mock-репозитории;
+// экраны и модели этот файл не импортируют. На L5 файл удаляется.
 
-/// Пользователь
-class User {
-  final int id;
-  final String email;
-  final String name;
+import 'exercise.dart';
+import 'workout_session.dart';
 
-  const User({required this.id, required this.email, required this.name});
-
-  factory User.fromJson(Map<String, dynamic> json) => User(
-        id: json['id'] as int,
-        email: json['email'] as String,
-        name: json['name'] as String,
-      );
-}
-
-/// Упражнение — сущность
-class Exercise {
-  final int id;
-  final String name;
-  final String muscleGroup;
-  final String description;
-  final String technique; // шаги техники, каждый с новой строки
-  final String imageUrl;
-  final DateTime createdAt;
-
-  const Exercise({
-    required this.id,
-    required this.name,
-    required this.muscleGroup,
-    required this.description,
-    required this.technique,
-    required this.imageUrl,
-    required this.createdAt,
-  });
-
-  /// Шаги техники списком
-  List<String> get techniqueSteps =>
-      technique.split('\n').where((s) => s.trim().isNotEmpty).toList();
-
-  factory Exercise.fromJson(Map<String, dynamic> json) => Exercise(
-        id: json['id'] as int,
-        name: json['name'] as String,
-        muscleGroup: json['muscleGroup'] as String,
-        description: json['description'] as String? ?? '',
-        technique: json['technique'] as String? ?? '',
-        imageUrl: json['imageUrl'] as String? ?? '',
-        createdAt: DateTime.parse(json['createdAt'] as String),
-      );
-}
-
-/// Тренировочная сессия — сущность
-class WorkoutSession {
-  final int id;
-  final int userId;
-  final DateTime date;
-  final List<int> exerciseIds;
-  final int durationMin;
-  final String notes;
-  final DateTime createdAt;
-
-  const WorkoutSession({
-    required this.id,
-    required this.userId,
-    required this.date,
-    required this.exerciseIds,
-    required this.durationMin,
-    required this.notes,
-    required this.createdAt,
-  });
-
-  factory WorkoutSession.fromJson(Map<String, dynamic> json) => WorkoutSession(
-        id: json['id'] as int,
-        userId: json['userId'] as int,
-        date: DateTime.parse(json['date'] as String),
-        exerciseIds: (json['exerciseIds'] as List).cast<int>(),
-        durationMin: json['durationMin'] as int,
-        notes: json['notes'] as String? ?? '',
-        createdAt: DateTime.parse(json['createdAt'] as String),
-      );
-}
-
-
-const mockUser = User(id: 1, email: 'ana.rusu@student.utm.md', name: 'Ана Русу');
-
-/// Группы мышц для фильтра в каталоге
-const muscleGroups = ['Грудь', 'Спина', 'Ноги', 'Плечи', 'Руки', 'Пресс', 'Кардио'];
+// Временно: экраны, ещё не переведённые на модели, получают типы отсюда.
+export 'exercise.dart';
+export 'workout_session.dart';
 
 final mockExercises = [
   Exercise(
@@ -195,6 +117,7 @@ final mockExercises = [
 ];
 
 /// Сессии в обратном хронологическом порядке новые сверху
+
 final mockSessions = [
   WorkoutSession(
     id: 8, userId: 1, date: DateTime(2026, 9, 22),
@@ -246,5 +169,5 @@ final mockSessions = [
   ),
 ];
 
-/// Поиск упражнения по id
+/// Поиск упражнения по id — временно, пока экраны не переведены на модели.
 Exercise exerciseById(int id) => mockExercises.firstWhere((e) => e.id == id);
