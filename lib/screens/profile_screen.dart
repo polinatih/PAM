@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../data/mock_exercise_repository.dart';
+import '../data/mock_session_repository.dart';
 import '../models/exercises_model.dart';
 import '../models/sessions_model.dart';
 import '../models/user_model.dart';
@@ -143,6 +145,15 @@ class ProfileScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 16),
+
+              // Леса демонстрации: единственное место UI, знающее о mock-е.
+              // Исчезает на L5 вместе с mock-репозиториями.
+              const GlassCard(
+                radius: 28,
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                child: _NetworkFailureSwitch(),
+              ),
               const SizedBox(height: 20),
 
               // Выход — деструктивное действие: сначала диалог подтверждения
@@ -195,6 +206,42 @@ Future<void> _logout(BuildContext context) async {
   if (ok == true && context.mounted) {
     context.read<UserModel>().signOut(); // read: это действие, а не показ
     context.go('/login'); // go: раздел с вкладками уходит из стека
+  }
+}
+
+/// Переключатель «Симулировать сбой сети» (L4, демонстрация на защите).
+/// Положение переключателя — эфемерное состояние → StatefulWidget + setState.
+class _NetworkFailureSwitch extends StatefulWidget {
+  const _NetworkFailureSwitch();
+
+  @override
+  State<_NetworkFailureSwitch> createState() => _NetworkFailureSwitchState();
+}
+
+class _NetworkFailureSwitchState extends State<_NetworkFailureSwitch> {
+  late bool _failing;
+
+  @override
+  void initState() {
+    super.initState();
+    _failing = context.read<MockSessionRepository>().simulateError;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SwitchListTile(
+      secondary: Icon(Icons.wifi_off_rounded, color: scheme.error),
+      title: const Text('Симулировать сбой сети'),
+      subtitle: const Text('Все запросы к хранилищу будут падать'),
+      value: _failing,
+      onChanged: (value) {
+        setState(() => _failing = value);
+        // read в callback-е: действие, а не подписка
+        context.read<MockSessionRepository>().simulateError = value;
+        context.read<MockExerciseRepository>().simulateError = value;
+      },
+    );
   }
 }
 

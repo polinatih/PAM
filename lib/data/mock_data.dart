@@ -4,10 +4,6 @@
 import 'exercise.dart';
 import 'workout_session.dart';
 
-// Временно: экраны, ещё не переведённые на модели, получают типы отсюда.
-export 'exercise.dart';
-export 'workout_session.dart';
-
 final mockExercises = [
   Exercise(
     id: 1,
@@ -168,6 +164,3 @@ final mockSessions = [
     createdAt: DateTime(2026, 9, 2, 17, 10),
   ),
 ];
-
-/// Поиск упражнения по id — временно, пока экраны не переведены на модели.
-Exercise exerciseById(int id) => mockExercises.firstWhere((e) => e.id == id);
