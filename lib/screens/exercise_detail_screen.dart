@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
-import '../data/mock_data.dart';
+import '../models/exercises_model.dart';
 import '../widgets/arc_ring.dart';
+import '../widgets/error_view.dart';
 import '../widgets/exercise_thumb.dart';
 import '../widgets/glass_background.dart';
 import '../widgets/glass_card.dart';
@@ -12,7 +14,8 @@ import '../widgets/section_label.dart';
 
 /// Карточка упражнения: изображение, описание, техника выполнения.
 /// Получает из адреса /exercises/:id только id и сам ищет упражнение:
-/// сегодня в mock-данных, на L4 — через Repository, на L5 — GET /exercises/{id}.
+/// через ExercisesModel (L4: mock-репозиторий, L5: GET /exercises).
+/// Адрес остался, источник данных поменялся под низом.
 class ExerciseDetailScreen extends StatelessWidget {
   final int id;
 
@@ -20,9 +23,42 @@ class ExerciseDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final exercise = exerciseById(id);
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
+    final model = context.watch<ExercisesModel>(); // watch в build
+    final exercise = model.byId(id);
+
+    // У null два смысла: список ещё грузится — или такого id нет
+    if (exercise == null) {
+      return Scaffold(
+        body: GlassBackground(
+          mirrored: true,
+          child: SafeArea(
+            child: model.error != null && !model.isLoading
+                ? ErrorView(
+                    message: model.error!,
+                    onRetry: () => context.read<ExercisesModel>().load(),
+                  )
+                : Center(
+                    child: model.isLoading
+                        ? const CircularProgressIndicator()
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('Упражнение не существует',
+                                  style: text.bodyLarge),
+                              const SizedBox(height: 12),
+                              TextButton(
+                                onPressed: () => context.go('/exercises'),
+                                child: const Text('К каталогу'),
+                              ),
+                            ],
+                          ),
+                  ),
+          ),
+        ),
+      );
+    }
     final steps = exercise.techniqueSteps;
 
     return Scaffold(

@@ -2,17 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import 'data/mock_exercise_repository.dart';
+import 'data/mock_session_repository.dart';
+import 'models/exercises_model.dart';
+import 'models/sessions_model.dart';
 import 'models/user_model.dart';
 import 'router.dart';
 
-/// Модель монтируется НАД router-ом — её видят все экраны.
-/// create — фабрика: Provider создаёт модель лениво и сам вызывает dispose.
-void main() => runApp(
-      ChangeNotifierProvider(
-        create: (_) => UserModel(),
-        child: const MyApp(),
-      ),
-    );
+/// Корень композиции: ЗДЕСЬ (и только здесь) выбирается источник данных.
+/// На L5 mock-репозитории заменятся http-вариантами — экраны не трогаются.
+void main() {
+  final exerciseRepository = MockExerciseRepository();
+  final sessionRepository = MockSessionRepository();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        // Леса демонстрации аварии (переключатель в профиле) — исчезают на L5
+        Provider<MockExerciseRepository>.value(value: exerciseRepository),
+        Provider<MockSessionRepository>.value(value: sessionRepository),
+        // Модели — фабрикой; ..load() запускает первую загрузку
+        ChangeNotifierProvider(
+          create: (_) => ExercisesModel(exerciseRepository)..load(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => SessionsModel(sessionRepository)..load(),
+        ),
+        ChangeNotifierProvider(create: (_) => UserModel()),
+      ],
+      child: const MyApp(), // MaterialApp.router — нетронут с L3
+    ),
+  );
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

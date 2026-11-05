@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../data/mock_data.dart';
+import '../data/exercise.dart';
 import 'exercise_thumb.dart';
 import 'glass_card.dart';
 import 'section_label.dart';
