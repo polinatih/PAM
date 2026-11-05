@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../data/format.dart';
-import '../data/mock_data.dart';
+import '../data/workout_session.dart';
+import '../models/exercises_model.dart';
+import '../models/sessions_model.dart';
 import '../widgets/filter_pill.dart';
 import '../widgets/glass_background.dart';
 import '../widgets/glass_card.dart';
@@ -11,12 +14,12 @@ import '../widgets/glass_icon_button.dart';
 import '../widgets/pill_button.dart';
 import '../widgets/section_label.dart';
 
-/// Форма новой сессии / редактирования — функциональная локально (L3):
-/// Form + validator на каждом поле, контроллеры освобождаются в dispose.
-/// Поля = модель WorkoutSession: date, exerciseIds, durationMin, notes.
+/// Форма новой сессии / редактирования.
+/// Валидация и контроллеры — из L3 (без изменений); с L4 валидный submit
+/// ПИШЕТ через SessionsModel → repository, и все подписанные экраны
+/// (дневник, статистика, профиль, бейдж) обновляются сами.
 /// /diary/new — новая сессия (POST /workout-sessions на L5),
 /// /diary/:id — редактирование (PUT / DELETE на L5).
-/// Данные пока никуда не сохраняются — список растёт на L4.
 class SessionFormScreen extends StatefulWidget {
   final int? sessionId;
 
@@ -39,13 +42,19 @@ class _SessionFormScreenState extends State<SessionFormScreen> {
 
   WorkoutSession? _session; // null — новая сессия
   bool get _isEdit => _session != null;
+  bool _missing = false; // в адресе id, которого нет в дневнике
+
+  /// Идёт «запрос» — кнопки гаснут (эфемерное состояние → setState).
+  bool _busy = false;
 
   @override
   void initState() {
     super.initState();
-    // Экран получает из адреса только id и сам ищет сессию
+    // Экран получает из адреса только id и ищет сессию через модель
+    // (read: однократное чтение, а не подписка)
     if (widget.sessionId != null) {
-      _session = mockSessions.firstWhere((s) => s.id == widget.sessionId);
+      _session = context.read<SessionsModel>().byId(widget.sessionId!);
+      _missing = _session == null;
     }
     final now = DateTime.now();
     _date = _session?.date ?? DateTime(now.year, now.month, now.day);
@@ -90,22 +99,40 @@ class _SessionFormScreenState extends State<SessionFormScreen> {
     }
   }
 
-  /// Submit: валидирует → объявляет (SnackBar) → закрывает форму.
-  void _save() {
-    if (!_formKey.currentState!.validate()) return; // ошибки уже на экране
-    final minutes = int.parse(_durationCtrl.text);
+  void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        content: Text(
-          _isEdit
-              ? 'Сессия обновлена: $minutes мин'
-              : 'Сессия сохранена: $minutes мин, '
-                  'упражнений — ${_selectedIds.length}',
-        ),
-      ),
+      SnackBar(behavior: SnackBarBehavior.floating, content: Text(message)),
     );
-    context.pop(); // открыто push-ем → закрывается pop-ом
+  }
+
+  /// Submit: валидирует → пишет через модель → закрывает форму.
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return; // валидация L3, нетронута
+
+    final draft = WorkoutSession(
+      id: _session?.id ?? 0, // 0 — временный: настоящий id даст хранилище
+      userId: _session?.userId ?? 0, // на L5 владельца определит сервер
+      date: _date,
+      exerciseIds: _selectedIds.toList()..sort(),
+      durationMin: int.parse(_durationCtrl.text),
+      notes: _notesCtrl.text.trim(),
+      createdAt: _session?.createdAt ?? DateTime.now(),
+    );
+
+    setState(() => _busy = true);
+    final model = context.read<SessionsModel>(); // read: это действие
+    final error = _isEdit ? await model.update(draft) : await model.add(draft);
+    if (!mounted) return; // экран может умереть, пока «запрос» летит
+    setState(() => _busy = false);
+
+    if (error != null) {
+      _showSnack(error); // данные остаются в полях
+      return;
+    }
+    _showSnack(_isEdit
+        ? 'Сессия обновлена: ${draft.durationMin} мин'
+        : 'Сессия сохранена: ${draft.durationMin} мин');
+    context.pop(); // дневник позади УЖЕ обновлён — notifyListeners
   }
 
   /// Удаление — деструктивное действие, поэтому сначала диалог.
@@ -131,15 +158,19 @@ class _SessionFormScreenState extends State<SessionFormScreen> {
       ),
     );
     // ok == true, а не ok!: диалог, закрытый мимо, возвращает null
-    if (ok == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text('Сессия удалена'),
-        ),
-      );
-      context.pop();
+    if (ok != true || !mounted) return;
+
+    setState(() => _busy = true);
+    final error = await context.read<SessionsModel>().remove(_session!.id);
+    if (!mounted) return;
+    setState(() => _busy = false);
+
+    if (error != null) {
+      _showSnack(error);
+      return;
     }
+    _showSnack('Сессия удалена');
+    context.pop(); // объекта больше нет — его экран уходит из стека
   }
 
   // ---------------------------------------------------------------------------
@@ -176,6 +207,28 @@ class _SessionFormScreenState extends State<SessionFormScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
+    final catalog = context.watch<ExercisesModel>(); // список для выбора
+
+    // Старая ссылка или удалённая сессия: id в адресе есть, сессии нет
+    if (_missing) {
+      return Scaffold(
+        body: GlassBackground(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Тренировка не существует', style: text.bodyLarge),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () => context.go('/diary'),
+                  child: const Text('К дневнику'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       body: GlassBackground(
@@ -199,7 +252,7 @@ class _SessionFormScreenState extends State<SessionFormScreen> {
                       GlassIconButton(
                         icon: Icons.delete_outline_rounded,
                         tooltip: 'Удалить сессию',
-                        onPressed: _delete,
+                        onPressed: _busy ? null : _delete,
                       )
                     else
                       const SizedBox(width: 48),
@@ -315,7 +368,12 @@ class _SessionFormScreenState extends State<SessionFormScreen> {
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            for (final e in mockExercises)
+                            if (catalog.isLoading)
+                              const Padding(
+                                padding: EdgeInsets.all(8),
+                                child: CircularProgressIndicator(),
+                              ),
+                            for (final e in catalog.all)
                               FilterPill(
                                 label: e.name,
                                 selected: _selectedIds.contains(e.id),
@@ -378,7 +436,7 @@ class _SessionFormScreenState extends State<SessionFormScreen> {
                 PillButton(
                   label: _isEdit ? 'Сохранить изменения' : 'Сохранить сессию',
                   icon: Icons.check_rounded,
-                  onPressed: _save,
+                  onPressed: _busy ? null : _save, // без двойного submit
                 ),
               ],
             ),
