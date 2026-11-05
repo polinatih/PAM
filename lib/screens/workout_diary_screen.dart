@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../data/format.dart';
-import '../data/mock_data.dart';
+import '../data/workout_session.dart';
+import '../models/sessions_model.dart';
+import '../widgets/error_view.dart';
 import '../widgets/glass_background.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/section_label.dart';
 import '../widgets/session_card.dart';
 
 /// Дневник тренировок: сессии в хронологическом порядке (новые сверху),
-/// как их отдаёт GET /workout-sessions.
+/// как их отдаёт GET /workout-sessions. Данные — из SessionsModel (watch).
 class WorkoutDiaryScreen extends StatelessWidget {
   const WorkoutDiaryScreen({super.key});
 
@@ -18,9 +21,48 @@ class WorkoutDiaryScreen extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
-    final latest = mockSessions.first.date;
-    final totalMin =
-        mockSessions.fold<int>(0, (sum, s) => sum + s.durationMin);
+    final model = context.watch<SessionsModel>(); // watch в build (C7)
+    final sessions = model.sessions;
+    final latest = sessions.isEmpty ? DateTime.now() : sessions.first.date;
+
+    // Три состояния: грузится / ошибка с retry / данные
+    final Widget body;
+    if (model.isLoading) {
+      body = const Center(child: CircularProgressIndicator());
+    } else if (model.error != null) {
+      body = ErrorView(
+        message: model.error!,
+        onRetry: () => context.read<SessionsModel>().load(),
+      );
+    } else if (sessions.isEmpty) {
+      body = Center(
+        child: Text('Пока нет тренировок — добавьте первую',
+            style: text.bodyLarge),
+      );
+    } else {
+      body = RefreshIndicator(
+        // потянуть вниз — перезагрузить (read: действие)
+        onRefresh: () => context.read<SessionsModel>().load(),
+        child: ListView.separated(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+          itemCount: sessions.length,
+          // Разделитель продолжает вертикальную линию ленты
+          separatorBuilder: (context, index) => SizedBox(
+            height: 14,
+            child: Row(
+              children: [
+                const SizedBox(width: 31),
+                Container(
+                  width: 1,
+                  color: scheme.onSurface.withValues(alpha: 0.12),
+                ),
+              ],
+            ),
+          ),
+          itemBuilder: (context, i) => _TimelineItem(session: sessions[i]),
+        ),
+      );
+    }
 
     return Scaffold(
       body: GlassBackground(
@@ -81,41 +123,29 @@ class WorkoutDiaryScreen extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _Summary(value: '${mockSessions.length}', label: 'сессий'),
+                      _Summary(
+                        value: model.isLoading ? '…' : '${sessions.length}',
+                        label: 'сессий',
+                      ),
                       Container(
                         width: 1,
                         height: 28,
                         color: scheme.onSurface.withValues(alpha: 0.1),
                       ),
-                      _Summary(value: formatDuration(totalMin), label: 'всего'),
+                      _Summary(
+                        value: model.isLoading
+                            ? '…'
+                            : formatDuration(model.totalMinutes),
+                        label: 'всего',
+                      ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 18),
 
-              // Лента сессий
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
-                  itemCount: mockSessions.length,
-                  // Разделитель продолжает вертикальную линию ленты
-                  separatorBuilder: (context, index) => SizedBox(
-                    height: 14,
-                    child: Row(
-                      children: [
-                        const SizedBox(width: 31),
-                        Container(
-                          width: 1,
-                          color: scheme.onSurface.withValues(alpha: 0.12),
-                        ),
-                      ],
-                    ),
-                  ),
-                  itemBuilder: (context, i) =>
-                      _TimelineItem(session: mockSessions[i]),
-                ),
-              ),
+              // Лента сессий — в одном из трёх состояний
+              Expanded(child: body),
             ],
           ),
         ),

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../data/exercise.dart';
 import '../data/format.dart';
-import '../data/mock_data.dart';
+import '../data/workout_session.dart';
+import '../models/exercises_model.dart';
 import 'glass_card.dart';
 import 'section_label.dart';
 
@@ -26,8 +29,13 @@ class SessionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    // В сессии хранятся только id — названия берём из списка упражнений
-    final exercises = session.exerciseIds.map(exerciseById).toList();
+    // В сессии хранятся только id — названия берём из модели упражнений
+    // (watch: когда каталог загрузится, карточка перерисуется сама)
+    final catalog = context.watch<ExercisesModel>();
+    final exercises = session.exerciseIds
+        .map(catalog.byId)
+        .whereType<Exercise>()
+        .toList();
 
     return GlassCard(
       radius: 26,
