@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../data/mock_data.dart';
+import '../models/exercises_model.dart';
+import '../models/sessions_model.dart';
 import '../models/user_model.dart';
 import '../widgets/arc_ring.dart';
 import '../widgets/glass_background.dart';
@@ -33,8 +34,15 @@ class ProfileScreen extends StatelessWidget {
         .map((part) => part[0])
         .take(2)
         .join();
-    final totalMin =
-        mockSessions.fold<int>(0, (sum, s) => sum + s.durationMin);
+    // Счётчики — из моделей (watch): после добавления/удаления сессии
+    // профиль обновится сам. Пока данные грузятся — «…».
+    final diary = context.watch<SessionsModel>();
+    final catalog = context.watch<ExercisesModel>();
+    final sessionsCount =
+        diary.isLoading ? '…' : '${diary.sessions.length}';
+    final hours = diary.isLoading ? '…' : '${diary.totalMinutes ~/ 60}';
+    final exercisesCount =
+        catalog.isLoading ? '…' : '${catalog.all.length}';
 
     return Scaffold(
       body: GlassBackground(
@@ -88,14 +96,14 @@ class ProfileScreen extends StatelessWidget {
                   Expanded(
                     child: StatTile(
                       label: 'Сессий',
-                      value: '${mockSessions.length}',
+                      value: sessionsCount,
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: StatTile(
                       label: 'В зале',
-                      value: '${totalMin ~/ 60}',
+                      value: hours,
                       unit: 'ч',
                     ),
                   ),
@@ -103,7 +111,7 @@ class ProfileScreen extends StatelessWidget {
                   Expanded(
                     child: StatTile(
                       label: 'Упражн.',
-                      value: '${mockExercises.length}',
+                      value: exercisesCount,
                     ),
                   ),
                 ],
@@ -119,7 +127,7 @@ class ProfileScreen extends StatelessWidget {
                     _MenuRow(
                       icon: Icons.fitness_center,
                       title: 'Мои упражнения',
-                      count: mockExercises.length,
+                      count: catalog.all.length,
                     ),
                     Divider(
                       height: 1,
@@ -130,7 +138,7 @@ class ProfileScreen extends StatelessWidget {
                     _MenuRow(
                       icon: Icons.menu_book_outlined,
                       title: 'Все тренировки',
-                      count: mockSessions.length,
+                      count: diary.sessions.length,
                     ),
                   ],
                 ),
