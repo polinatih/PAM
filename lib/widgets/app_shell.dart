@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import '../models/sessions_model.dart';
 
 import 'glass_nav_bar.dart';
 
@@ -13,6 +16,21 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    // Один «живой угол» — Consumer: перерисовывается только бейдж,
+    // а не весь shell. Число сессий меняется из формы и из дневника.
+    Widget diaryIcon(IconData icon) => Consumer<SessionsModel>(
+          builder: (context, diary, child) => Badge(
+            isLabelVisible: !diary.isLoading && diary.sessions.isNotEmpty,
+            backgroundColor: scheme.primary,
+            textColor: scheme.onPrimary,
+            label: Text('${diary.sessions.length}'),
+            child: child,
+          ),
+          child: Icon(icon),
+        );
+
     return Scaffold(
       // Контент уходит под плавающее меню — видно стекло
       extendBody: true,
@@ -26,23 +44,23 @@ class AppShell extends StatelessWidget {
             index,
             initialLocation: index == navigationShell.currentIndex,
           ),
-          destinations: const [
-            NavigationDestination(
+          destinations: [
+            const NavigationDestination(
               icon: Icon(Icons.fitness_center_outlined),
               selectedIcon: Icon(Icons.fitness_center),
               label: 'Каталог',
             ),
             NavigationDestination(
-              icon: Icon(Icons.menu_book_outlined),
-              selectedIcon: Icon(Icons.menu_book),
+              icon: diaryIcon(Icons.menu_book_outlined),
+              selectedIcon: diaryIcon(Icons.menu_book),
               label: 'Дневник',
             ),
-            NavigationDestination(
+            const NavigationDestination(
               icon: Icon(Icons.insights_outlined),
               selectedIcon: Icon(Icons.insights),
               label: 'Статистика',
             ),
-            NavigationDestination(
+            const NavigationDestination(
               icon: Icon(Icons.person_outline_rounded),
               selectedIcon: Icon(Icons.person_rounded),
               label: 'Профиль',

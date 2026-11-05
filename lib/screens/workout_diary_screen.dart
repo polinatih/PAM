@@ -177,18 +177,66 @@ class _Summary extends StatelessWidget {
 }
 
 /// Один элемент ленты: слева день и день недели с линией, справа карточка.
+/// Свайп влево — удаление (с диалогом подтверждения).
 class _TimelineItem extends StatelessWidget {
   final WorkoutSession session;
 
   const _TimelineItem({required this.session});
+
+  /// Диалог → удаление через модель → SnackBar.
+  /// Возвращает false: строку убирает не Dismissible, а модель —
+  /// после notifyListeners список перерисуется без этой сессии.
+  Future<bool> _confirmDelete(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Удалить тренировку?'),
+        content: Text(
+            'Сессию от ${formatDateShort(session.date)} нельзя будет восстановить.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return false;
+    final messenger = ScaffoldMessenger.of(context);
+    final error = await context.read<SessionsModel>().remove(session.id);
+    messenger.showSnackBar(SnackBar(
+      behavior: SnackBarBehavior.floating,
+      content: Text(error ?? 'Сессия удалена'),
+    ));
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
-    // IntrinsicHeight — чтобы линия слева была высотой с карточку
-    return IntrinsicHeight(
+    // Ключ — идентичность из данных (id), а не UniqueKey (C7)
+    return Dismissible(
+      key: ValueKey(session.id),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (_) => _confirmDelete(context),
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 28),
+        decoration: BoxDecoration(
+          color: scheme.errorContainer,
+          borderRadius: BorderRadius.circular(26),
+        ),
+        child: Icon(Icons.delete_outline_rounded,
+            color: scheme.onErrorContainer),
+      ),
+      // IntrinsicHeight — чтобы линия слева была высотой с карточку
+      child: IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -222,6 +270,7 @@ class _TimelineItem extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
