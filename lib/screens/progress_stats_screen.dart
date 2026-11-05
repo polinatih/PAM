@@ -1,9 +1,13 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../data/format.dart';
-import '../data/mock_data.dart';
+import '../data/workout_session.dart';
+import '../models/exercises_model.dart';
+import '../models/sessions_model.dart';
+import '../widgets/error_view.dart';
 import '../widgets/glass_background.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/section_label.dart';
@@ -12,53 +16,90 @@ import '../widgets/stat_tile.dart';
 
 /// Статистика прогресса: сессии в неделю и суммарная длительность.
 /// Отдельного endpoint-а для статистики нет — всё считается в приложении
-/// из списка сессий (на L5 — из ответа GET /workout-sessions).
+/// из SessionsModel (L4: mock-репозиторий, L5: GET /workout-sessions).
 class ProgressStatsScreen extends StatelessWidget {
   const ProgressStatsScreen({super.key});
 
-  /// Группируем сессии по неделям месяца: 1–7, 8–14, 15–21, 22–28.
-  static List<_Week> _weeks() {
-    const labels = ['1–7', '8–14', '15–21', '22–28'];
+  /// Последние 4 недели, считая от самой свежей тренировки.
+  static List<_Week> _weeks(List<WorkoutSession> list) {
+    final latest = list.first.date; // список отсортирован: новые сверху
+    final anchor = DateTime(latest.year, latest.month, latest.day);
+    final start = anchor.subtract(const Duration(days: 27));
     final sessions = List.filled(4, 0);
     final minutes = List.filled(4, 0);
-    for (final s in mockSessions) {
-      final w = math.min((s.date.day - 1) ~/ 7, 3);
-      sessions[w]++;
-      minutes[w] += s.durationMin;
+    for (final s in list) {
+      final day = DateTime(s.date.year, s.date.month, s.date.day);
+      final index = day.difference(start).inDays ~/ 7;
+      if (index < 0 || index > 3) continue; // старше четырёх недель
+      sessions[index]++;
+      minutes[index] += s.durationMin;
     }
     return [
-      for (var i = 0; i < 4; i++) _Week(labels[i], sessions[i], minutes[i]),
+      for (var i = 0; i < 4; i++)
+        _Week(
+          '${start.add(Duration(days: i * 7)).day}–'
+          '${start.add(Duration(days: i * 7 + 6)).day}',
+          sessions[i],
+          minutes[i],
+        ),
     ];
   }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
+    final model = context.watch<SessionsModel>(); // watch в build (C7)
+    final catalog = context.watch<ExercisesModel>(); // названия упражнений
 
-    final weeks = _weeks();
-    final current = weeks.last;
-    final totalMin =
-        mockSessions.fold<int>(0, (sum, s) => sum + s.durationMin);
-    final avgMin = totalMin ~/ mockSessions.length;
-
-    // Самое частое упражнение: считаем, сколько раз встречается каждый id
-    final counts = <int, int>{};
-    for (final s in mockSessions) {
-      for (final id in s.exerciseIds) {
-        counts[id] = (counts[id] ?? 0) + 1;
-      }
+    // Три состояния: грузится / ошибка с retry / данные
+    final Widget body;
+    if (model.isLoading) {
+      body = const Center(child: CircularProgressIndicator());
+    } else if (model.error != null) {
+      body = ErrorView(
+        message: model.error!,
+        onRetry: () => context.read<SessionsModel>().load(),
+      );
+    } else if (model.sessions.isEmpty) {
+      body = Center(
+        child: Text('Статистика появится после первой тренировки',
+            style: text.bodyLarge),
+      );
+    } else {
+      body = _buildStats(context, model, catalog);
     }
-    final top = counts.entries.reduce((a, b) => b.value > a.value ? b : a);
-
-    final latest = mockSessions.first.date;
 
     return Scaffold(
       body: GlassBackground(
         mirrored: true,
-        child: SafeArea(
-          bottom: false,
-          child: ListView(
+        child: SafeArea(bottom: false, child: body),
+      ),
+    );
+  }
+
+  Widget _buildStats(
+      BuildContext context, SessionsModel model, ExercisesModel catalog) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final sessions = model.sessions;
+
+    final weeks = _weeks(sessions);
+    final current = weeks.last;
+    final totalMin = model.totalMinutes;
+    final avgMin = totalMin ~/ sessions.length;
+
+    // Самое частое упражнение: считаем, сколько раз встречается каждый id
+    final counts = <int, int>{};
+    for (final s in sessions) {
+      for (final id in s.exerciseIds) {
+        counts[id] = (counts[id] ?? 0) + 1;
+      }
+    }
+    final top = counts.isEmpty
+        ? null
+        : counts.entries.reduce((a, b) => b.value > a.value ? b : a);
+
+    return ListView(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 120),
             children: [
               Padding(
@@ -66,10 +107,7 @@ class ProgressStatsScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SectionLabel(
-                      'Прогресс · ${monthName(latest).toLowerCase()} '
-                      '${latest.year}',
-                    ),
+                    const SectionLabel('Прогресс · последние 4 недели'),
                     const SizedBox(height: 6),
                     Text('Статистика', style: text.headlineLarge),
                   ],
@@ -115,7 +153,7 @@ class ProgressStatsScreen extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  SectionLabel('${current.label} сент'),
+                                  SectionLabel(current.label),
                                   const SizedBox(height: 2),
                                   Text(formatDuration(current.minutes),
                                       style: text.labelLarge),
@@ -152,7 +190,7 @@ class ProgressStatsScreen extends StatelessWidget {
                     Row(
                       children: [
                         const Expanded(child: SectionLabel('Сессии в неделю')),
-                        SectionLabel('всего ${mockSessions.length}',
+                        SectionLabel('всего ${sessions.length}',
                             color: scheme.onSurface),
                       ],
                     ),
@@ -180,8 +218,10 @@ class ProgressStatsScreen extends StatelessWidget {
                   Expanded(
                     child: StatTile(
                       label: 'Чаще всего',
-                      value: exerciseById(top.key).name,
-                      caption: '${top.value} раза',
+                      value: top == null
+                          ? '—'
+                          : catalog.byId(top.key)?.name ?? '…',
+                      caption: top == null ? null : '${top.value} раз(а)',
                       numeric: false,
                     ),
                   ),
@@ -195,11 +235,8 @@ class ProgressStatsScreen extends StatelessWidget {
                 child: SectionLabel('Последняя тренировка'),
               ),
               const SizedBox(height: 10),
-              SessionCard(session: mockSessions.first, showFullDate: true),
+              SessionCard(session: sessions.first, showFullDate: true),
             ],
-          ),
-        ),
-      ),
     );
   }
 }
