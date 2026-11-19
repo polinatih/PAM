@@ -1,0 +1,7 @@
+name: conformance
+description: FitTrack — проверки соответствия backend-а контракту (без зависимостей).
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
