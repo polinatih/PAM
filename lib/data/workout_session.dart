@@ -41,4 +41,13 @@ class WorkoutSession {
         notes: json['notes'] as String? ?? '',
         createdAt: DateTime.parse(json['createdAt'] as String),
       );
+
+  /// Тело для POST/PUT /workout-sessions. Без id, userId и createdAt:
+  /// идентичность и владельца определяет сервер (по token-у).
+  Map<String, dynamic> toJson() => {
+        'date': date.toIso8601String().substring(0, 10), // YYYY-MM-DD
+        'exerciseIds': exerciseIds,
+        'durationMin': durationMin,
+        'notes': notes,
+      };
 }

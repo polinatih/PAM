@@ -36,4 +36,13 @@ class Exercise {
         imageUrl: json['imageUrl'] as String? ?? '',
         createdAt: DateTime.parse(json['createdAt'] as String),
       );
+
+  /// Тело для POST/PUT /exercises — без id и createdAt: их даёт сервер.
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'muscleGroup': muscleGroup,
+        'description': description,
+        'technique': technique,
+        'imageUrl': imageUrl,
+      };
 }
