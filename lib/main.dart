@@ -1,34 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import 'data/auth_api.dart';
 import 'data/mock_exercise_repository.dart';
 import 'data/mock_session_repository.dart';
+import 'data/result.dart';
+import 'data/token_store.dart';
 import 'models/exercises_model.dart';
 import 'models/sessions_model.dart';
 import 'models/user_model.dart';
 import 'router.dart';
 
+/// Адрес бэкенда. Эмулятор Android не знает «localhost» ноутбука:
+/// сервер на ноутбуке для эмулятора — 10.0.2.2. На телефоне — IP ноутбука.
+const apiBase = 'http://10.0.2.2:8080';
+
 /// Корень композиции: ЗДЕСЬ (и только здесь) выбирается источник данных.
-/// На L5 mock-репозитории заменятся http-вариантами — экраны не трогаются.
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // prefs до runApp (C9)
+  final tokens = TokenStore();
+  final loggedIn = await tokens.read() != null; // запуск решает по token-у
+
+  router = GoRouter(
+    initialLocation: loggedIn ? '/exercises' : '/login',
+    routes: appRoutes, // карта L3 — без изменений
+  );
+
+  final auth = AuthApi(apiBase, tokens);
   final exerciseRepository = MockExerciseRepository();
   final sessionRepository = MockSessionRepository();
 
   runApp(
     MultiProvider(
       providers: [
+        Provider<AuthApi>.value(value: auth),
         // Леса демонстрации аварии (переключатель в профиле) — исчезают на L5
         Provider<MockExerciseRepository>.value(value: exerciseRepository),
         Provider<MockSessionRepository>.value(value: sessionRepository),
-        // Модели — фабрикой; ..load() запускает первую загрузку
         ChangeNotifierProvider(
           create: (_) => ExercisesModel(exerciseRepository)..load(),
         ),
         ChangeNotifierProvider(
           create: (_) => SessionsModel(sessionRepository)..load(),
         ),
-        ChangeNotifierProvider(create: (_) => UserModel()),
+        ChangeNotifierProvider(
+          create: (_) {
+            final user = UserModel();
+            // token есть → узнаём, чей он (GET /me), для профиля
+            if (loggedIn) {
+              auth.me().then((result) {
+                if (result case Ok(:final value)) user.signIn(value);
+              });
+            }
+            return user;
+          },
+        ),
       ],
       child: const MyApp(), // MaterialApp.router — нетронут с L3
     ),

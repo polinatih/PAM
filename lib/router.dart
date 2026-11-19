@@ -12,9 +12,13 @@ import 'widgets/app_shell.dart';
 /// Карта маршрутов приложения: у каждого экрана из ТЗ — свой адрес.
 /// Адреса повторяют REST API бэкенда: /exercises/:id ↔ GET /exercises/{id}.
 /// Router — глобальный объект: после изменения карты нужен restart (R).
-final router = GoRouter(
-  initialLocation: '/login', // приложение стартует со входа
-  routes: [
+///
+/// L5: стартовый адрес зависит от token-а, который читается асинхронно,
+/// поэтому router строит main(): `router = GoRouter(initialLocation: ...)`.
+/// Здесь — только объявление (late final) и сама карта маршрутов.
+late final GoRouter router;
+
+final appRoutes = <RouteBase>[
     // Вход — ВНЕ shell-а: на экране входа нет вкладок
     GoRoute(
       path: '/login',
@@ -84,5 +88,4 @@ final router = GoRouter(
         ]),
       ],
     ),
-  ],
-);
+  ];

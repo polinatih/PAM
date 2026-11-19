@@ -1,5 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- L5: приложение ходит в сеть, к своему бэкенду -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
+        android:usesCleartextTraffic="true"
         android:label="fit_track"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

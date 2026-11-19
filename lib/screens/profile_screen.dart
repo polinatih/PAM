@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../data/auth_api.dart';
 import '../data/mock_exercise_repository.dart';
 import '../data/mock_session_repository.dart';
 import '../models/exercises_model.dart';
@@ -203,10 +204,11 @@ Future<void> _logout(BuildContext context) async {
   );
   // ok == true: закрытый мимо диалог возвращает null.
   // После await context используем только если он ещё mounted.
-  if (ok == true && context.mounted) {
-    context.read<UserModel>().signOut(); // read: это действие, а не показ
-    context.go('/login'); // go: раздел с вкладками уходит из стека
-  }
+  if (ok != true || !context.mounted) return;
+  await context.read<AuthApi>().logout(); // token стирается из prefs
+  if (!context.mounted) return;
+  context.read<UserModel>().signOut(); // read: это действие, а не показ
+  context.go('/login'); // go: раздел с вкладками уходит из стека
 }
 
 /// Переключатель «Симулировать сбой сети» (L4, демонстрация на защите).

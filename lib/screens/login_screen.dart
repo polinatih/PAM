@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../data/user.dart';
+import '../data/auth_api.dart';
+import '../data/result.dart';
+import '../models/exercises_model.dart';
+import '../models/sessions_model.dart';
 import '../models/user_model.dart';
 
 import '../widgets/arc_ring.dart';
@@ -11,11 +14,10 @@ import '../widgets/glass_card.dart';
 import '../widgets/pill_button.dart';
 import '../widgets/section_label.dart';
 
-/// Экран входа / регистрации — локальная валидация (L3).
-/// Поля = тело запросов бэкенда: POST /auth/login {email, password},
-/// POST /auth/register {email, password, name}.
-/// Реальной проверки пользователя нет — она придёт на L5 (backend + JWT):
-/// любые данные, прошедшие валидацию, впускают в приложение.
+/// Экран входа / регистрации.
+/// Валидация — из L3 (без изменений); с L5 валидный submit идёт на сервер:
+/// POST /auth/login {email, password} или
+/// POST /auth/register {email, password, name}; token сохраняется в prefs.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -34,6 +36,9 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isRegister = false; // false — «Вход», true — «Регистрация»
   bool _hidePassword = true;
 
+  /// Запрос летит — кнопка гаснет: двойной submit — классический сетевой баг.
+  bool _busy = false;
+
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -47,27 +52,41 @@ class _LoginScreenState extends State<LoginScreen> {
     _formKey.currentState?.reset(); // убираем ошибки прошлого режима
   }
 
-  void _submit() {
-    if (!_formKey.currentState!.validate()) return; // ошибки уже на экране
-    if (_isRegister) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+  Future<void> _submit() async {
+    if (_busy) return;
+    if (!_formKey.currentState!.validate()) return; // валидация L3, нетронута
+
+    setState(() => _busy = true);
+    final auth = context.read<AuthApi>(); // read: это действие
+    final result = _isRegister
+        ? await auth.register(_emailCtrl.text.trim(), _passwordCtrl.text,
+            _nameCtrl.text.trim())
+        : await auth.login(_emailCtrl.text.trim(), _passwordCtrl.text);
+    if (!mounted) return; // экран может умереть, пока запрос летит
+    setState(() => _busy = false);
+
+    switch (result) {
+      case Ok(:final value):
+        // token уже сохранён в prefs (AuthApi). Запоминаем пользователя
+        // и перезагружаем данные — уже с новым token-ом.
+        context.read<UserModel>().signIn(value);
+        context.read<ExercisesModel>().load();
+        context.read<SessionsModel>().load();
+        if (_isRegister) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text('Аккаунт создан: ${value.name}'),
+          ));
+        }
+        // go, НЕ push: экран входа уходит из стека
+        context.go('/exercises');
+      case Err(:final msg):
+        // переведённое сообщение: «Неверный email или пароль» и т.п.
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           behavior: SnackBarBehavior.floating,
-          content: Text('Аккаунт создан: ${_nameCtrl.text.trim()}'),
-        ),
-      );
-    }
-    // Разделяемое состояние: запоминаем, кто вошёл (read — это действие).
-    // На L4 вход локальный; имя при обычном входе — часть e-mail до @.
-    final email = _emailCtrl.text.trim();
-    context.read<UserModel>().signIn(User(
-          id: 0, // настоящий id даст сервер на L5
-          email: email,
-          name: _isRegister ? _nameCtrl.text.trim() : email.split('@').first,
+          content: Text(msg),
         ));
-    // go, НЕ push: экран входа уходит из стека,
-    // и кнопка «назад» не вернёт вошедшего пользователя на логин
-    context.go('/exercises');
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -217,7 +236,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ? 'Зарегистрироваться'
                                     : 'Войти',
                                 icon: Icons.arrow_forward_rounded,
-                                onPressed: _submit,
+                                onPressed: _busy ? null : _submit,
                               ),
                               const SizedBox(height: 4),
                               Row(
