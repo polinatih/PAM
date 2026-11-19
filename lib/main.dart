@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'data/auth_api.dart';
-import 'data/mock_exercise_repository.dart';
-import 'data/mock_session_repository.dart';
+import 'data/http_exercise_repository.dart';
+import 'data/http_session_repository.dart';
 import 'data/result.dart';
 import 'data/token_store.dart';
 import 'models/exercises_model.dart';
@@ -29,16 +29,19 @@ Future<void> main() async {
   );
 
   final auth = AuthApi(apiBase, tokens);
-  final exerciseRepository = MockExerciseRepository();
-  final sessionRepository = MockSessionRepository();
+
+  // ЕДИНСТВЕННОЕ изменение источника данных: mock → http.
+  // 401 в любом репозитории → назад на login, решено в одном месте.
+  void toLogin() => router.go('/login');
+  final exerciseRepository =
+      HttpExerciseRepository(apiBase, tokens, onUnauthorized: toLogin);
+  final sessionRepository =
+      HttpSessionRepository(apiBase, tokens, onUnauthorized: toLogin);
 
   runApp(
     MultiProvider(
       providers: [
         Provider<AuthApi>.value(value: auth),
-        // Леса демонстрации аварии (переключатель в профиле) — исчезают на L5
-        Provider<MockExerciseRepository>.value(value: exerciseRepository),
-        Provider<MockSessionRepository>.value(value: sessionRepository),
         ChangeNotifierProvider(
           create: (_) => ExercisesModel(exerciseRepository)..load(),
         ),
