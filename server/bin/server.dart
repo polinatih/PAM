@@ -15,6 +15,7 @@ import 'package:server/errors.dart';
 import 'package:server/exercises.dart';
 import 'package:server/files.dart';
 import 'package:server/notes.dart';
+import 'package:server/workout_sessions.dart';
 
 Future<void> main() async {
   final port = int.tryParse(Platform.environment['PORT'] ?? '') ?? 8080;
@@ -41,6 +42,12 @@ Future<void> main() async {
         ..get('/exercises/<id>', requireAuth(getExercise))
         ..put('/exercises/<id>', requireAuth(updateExercise))
         ..delete('/exercises/<id>', requireAuth(deleteExercise))
+        // FitTrack: тренировочные сессии (на пользователя)
+        ..get('/workout-sessions', requireAuth(listSessions))
+        ..post('/workout-sessions', requireAuth(createSession))
+        ..get('/workout-sessions/<id>', requireAuth(getSession))
+        ..put('/workout-sessions/<id>', requireAuth(updateSession))
+        ..delete('/workout-sessions/<id>', requireAuth(deleteSession))
         ..post('/files', requireAuth(uploadFile))
         ..get('/files/<id>', downloadFile);
 

@@ -40,6 +40,18 @@ void initDb(String path) {
       created_at   TEXT    NOT NULL
     );
 
+    -- FitTrack: тренировочные сессии — принадлежат пользователю (user_id).
+    -- exercise_ids хранится как JSON-массив id: "[3,4,8]".
+    CREATE TABLE IF NOT EXISTS workout_sessions (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id      INTEGER NOT NULL REFERENCES users (id),
+      date         TEXT    NOT NULL,
+      exercise_ids TEXT    NOT NULL DEFAULT '[]',
+      duration_min INTEGER NOT NULL,
+      notes        TEXT    NOT NULL DEFAULT '',
+      created_at   TEXT    NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS files (
       id         INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id    INTEGER NOT NULL REFERENCES users (id),
