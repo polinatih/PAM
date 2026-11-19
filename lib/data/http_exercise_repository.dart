@@ -10,7 +10,8 @@ import 'exercise_repository.dart';
 import 'result.dart';
 import 'token_store.dart';
 
-/// http-реализация хранилища упражнений (GET /exercises, GET /exercises/{id}).
+/// http-реализация хранилища упражнений: пагинация, поиск и фильтр
+/// по группе мышц выполняются НА СЕРВЕРЕ — телефон получает только свой ломоть.
 class HttpExerciseRepository implements ExerciseRepository {
   HttpExerciseRepository(this.baseUrl, this.tokens, {this.onUnauthorized});
 
@@ -48,11 +49,23 @@ class HttpExerciseRepository implements ExerciseRepository {
   }
 
   @override
-  Future<Result<List<Exercise>>> fetchAll() => _guard(() async {
-        final res = await http
-            .get(Uri.parse('$baseUrl/exercises?limit=100'),
-                headers: await _headers())
-            .timeout(_timeout);
+  Future<Result<List<Exercise>>> fetchAll({
+    int page = 1,
+    int limit = 20,
+    String? search,
+    String? muscleGroup,
+  }) =>
+      _guard(() async {
+        // Адрес получает query-параметры; кириллица кодируется сама
+        final uri = Uri.parse('$baseUrl/exercises').replace(queryParameters: {
+          'page': '$page',
+          'limit': '$limit',
+          if (search != null && search.isNotEmpty) 'search': search,
+          if (muscleGroup != null && muscleGroup.isNotEmpty)
+            'muscleGroup': muscleGroup,
+        });
+        final res =
+            await http.get(uri, headers: await _headers()).timeout(_timeout);
         if (res.statusCode == 401) return Err(await _sessionDied());
         if (res.statusCode != 200) return Err(apiMessage(res));
         final data = jsonDecode(res.body) as Map<String, dynamic>; // конверт

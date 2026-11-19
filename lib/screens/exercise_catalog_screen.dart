@@ -12,9 +12,10 @@ import '../widgets/glass_card.dart';
 import '../widgets/glass_icon_button.dart';
 import '../widgets/section_label.dart';
 
-/// Каталог упражнений: поиск + фильтр по группе мышц.
+/// Каталог упражнений: поиск + фильтр по группе мышц + подгрузка ломтями.
 /// Данные — из ExercisesModel (watch), три состояния на виду.
-/// Выбранный фильтр и текст поиска — эфемерное состояние экрана → setState.
+/// L5: поиск и фильтр выполняются НА СЕРВЕРЕ (load(search:, muscleGroup:)),
+/// хвост списка просит следующую страницу (loadMore).
 class ExerciseCatalogScreen extends StatefulWidget {
   const ExerciseCatalogScreen({super.key});
 
@@ -23,22 +24,12 @@ class ExerciseCatalogScreen extends StatefulWidget {
 }
 
 class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
-  final _searchCtrl = TextEditingController();
-  String? _group; // null — «Все»
+  final _searchCtrl = TextEditingController(); // текст поля — эфемерный
 
   @override
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
-  }
-
-  /// Фильтр по группе и поиск по названию — поверх загруженного списка.
-  List<Exercise> _filter(List<Exercise> all) {
-    final query = _searchCtrl.text.trim().toLowerCase();
-    return all
-        .where((e) => _group == null || e.muscleGroup == _group)
-        .where((e) => query.isEmpty || e.name.toLowerCase().contains(query))
-        .toList();
   }
 
   @override
@@ -56,19 +47,30 @@ class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
         onRetry: () => context.read<ExercisesModel>().load(), // read: действие
       );
     } else {
-      final items = _filter(model.exercises);
+      final items = model.exercises;
       body = items.isEmpty
           ? Center(child: Text('Ничего не найдено', style: text.bodyLarge))
           : ListView.separated(
               // снизу запас под плавающее нижнее меню
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
-              itemCount: items.length,
+              // +1 — «хвост», который просит следующую страницу
+              itemCount: items.length + (model.hasMore ? 1 : 0),
               separatorBuilder: (context, index) => const SizedBox(height: 10),
-              itemBuilder: (context, i) => ExerciseCard(
-                exercise: items[i],
-                // push: «зайду и вернусь»; в адресе путешествует только id
-                onTap: () => context.push('/exercises/${items[i].id}'),
-              ),
+              itemBuilder: (context, i) {
+                if (i == items.length) {
+                  // read: действие (loadMore сам не извещает во время build)
+                  context.read<ExercisesModel>().loadMore();
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                return ExerciseCard(
+                  exercise: items[i],
+                  // push: «зайду и вернусь»; в адресе путешествует только id
+                  onTap: () => context.push('/exercises/${items[i].id}'),
+                );
+              },
             );
     }
 
@@ -89,9 +91,9 @@ class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SectionLabel(model.isLoading
+                          SectionLabel(model.all.isEmpty
                               ? 'Каталог · загрузка…'
-                              : 'Каталог · ${model.exercises.length} упражнений'),
+                              : 'Каталог · ${model.all.length} упражнений'),
                           const SizedBox(height: 6),
                           Text('Упражнения', style: text.headlineLarge),
                         ],
@@ -111,7 +113,10 @@ class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: _SearchField(
                   controller: _searchCtrl,
-                  onChanged: (_) => setState(() {}),
+                  // поиск на сервере — по «Enter» на клавиатуре
+                  onSubmitted: (query) => context
+                      .read<ExercisesModel>()
+                      .load(search: query.trim()),
                 ),
               ),
               const SizedBox(height: 14),
@@ -126,11 +131,14 @@ class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
                   separatorBuilder: (context, index) =>
                       const SizedBox(width: 8),
                   itemBuilder: (context, i) {
-                    final group = i == 0 ? null : muscleGroups[i - 1];
+                    final group = i == 0 ? '' : muscleGroups[i - 1];
                     return FilterPill(
-                      label: group ?? 'Все',
-                      selected: _group == group,
-                      onTap: () => setState(() => _group = group),
+                      label: i == 0 ? 'Все' : group,
+                      selected: model.muscleGroup == group,
+                      // фильтр на сервере: ?muscleGroup=
+                      onTap: () => context
+                          .read<ExercisesModel>()
+                          .load(muscleGroup: group),
                     );
                   },
                 ),
@@ -149,9 +157,9 @@ class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
 /// Стеклянное поле поиска.
 class _SearchField extends StatelessWidget {
   final TextEditingController controller;
-  final ValueChanged<String> onChanged;
+  final ValueChanged<String> onSubmitted;
 
-  const _SearchField({required this.controller, required this.onChanged});
+  const _SearchField({required this.controller, required this.onSubmitted});
 
   @override
   Widget build(BuildContext context) {
@@ -168,7 +176,7 @@ class _SearchField extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
-              onChanged: onChanged,
+              onSubmitted: onSubmitted,
               textInputAction: TextInputAction.search,
               style: text.bodyLarge,
               decoration: InputDecoration(
